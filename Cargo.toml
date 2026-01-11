@@ -1,0 +1,19 @@
+[package]
+name = "rust_kameo_image_gallery"
+version = "0.1.0"
+authors = ["MajorX234 <majorx234@googlemail.com>"]
+edition = "2024"
+
+
+[[bin]]
+name = "image_gallery_server"
+path = "src/main.rs"
+
+[dependencies]
+kameo = "0.19.2"
+env_logger = "0.11.8"
+serde = "1.0.228"
+serde_derive = "1.0.228"
+serde_json = "1.0.149"
+chrono = { version = "0.4.42", features = ["serde"] }
+
