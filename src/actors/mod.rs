@@ -108,6 +108,48 @@ impl Actor for Hub {
         Ok(Hub::new())
     }
 }
+
+impl Message<ClientRequest> for Hub {
+    type Reply = ClientResponse;
+    // TODO: add Messageresult<ClientRequest>
+    async fn handle(
+        &mut self,
+        msg: ClientRequest,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        use crate::protocols::ClientRequest::*;
+        let r = match msg {
+            ListAllPods => {
+                let pods = self.pods.iter().map(|(&id, info)| {
+                    crate::protocols::PodDescription {
+                        id,
+                        name: info.name.clone(),
+                        paths: info.image_paths.clone(),
+                        last_modified: info.last_modified,
+                    }
+                }).collect();
+                ClientResponse::Pods(pods)
+            }
+            ListPodStructure(id) => {
+                match self.pods.get(&id) {
+                    Some(info) => {
+                        ClientResponse::PodUpdatePaths {
+                            id,
+                            paths: info.image_paths.clone(),
+                            replace_images: false,
+                            last_modified: info.last_modified,
+                        }
+                    }
+                    None => {
+                        ClientResponse::UnknownPod(id)
+                    }
+                }
+            }
+        };
+        r
+    }
+}
+
 impl Message<ClientRequestAsync> for Hub {
     type Reply = ();
     async fn handle(
