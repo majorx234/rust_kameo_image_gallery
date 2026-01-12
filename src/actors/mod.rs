@@ -119,14 +119,14 @@ impl Message<ClientRequestAsync> for Hub {
             ClientRequestAsync::RequestImage { gallery_id, path, client_id } => {
                 match self.pods.get(&gallery_id) {
                     Some(pod) => {
-                        pod.addr.tell(PodResponse::RequestImage{
+                        let _ = pod.addr.tell(PodResponse::RequestImage{
                             path,
                             client_id
                         });
                     }
                     None => {
                         if let Some(client) = self.clients.get(&client_id) {
-                            client.tell(
+                            let _ = client.tell(
                                 ClientResponse::UnknownPod(gallery_id)
                             );
                         }
