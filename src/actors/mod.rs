@@ -136,3 +136,64 @@ impl Message<ClientRequestAsync> for Hub {
         }
     }
 }
+
+impl Message<IdedPodRequest> for Hub {
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: IdedPodRequest,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        use crate::protocols::PodRequest::*;
+        match msg.message {
+            RegisterSelf { proposed_id, name } => unreachable!("must be handles by WebClient"),
+            UpdateTitle { name } => {
+                self.pods.get_mut(&msg.id).expect("unable to find PodInfo").name = name.clone();
+                self.broadcast_client_response(ClientResponse::PodUpdateName{ id: msg.id, name, });
+            }
+            UpdatePaths { mut paths, replace_images } => {
+                paths.sort();
+                paths.dedup_by(|a, b| a == b);
+                let now = Utc::now();
+                let pod_info = self.pods.get_mut(&msg.id).expect("unable to find PodInfo");
+                pod_info.image_paths = paths.clone();
+                pod_info.last_modified = now;
+                self.broadcast_client_response(ClientResponse::PodUpdatePaths{
+                    id: msg.id,
+                    paths,
+                    replace_images,
+                    last_modified: now,
+                });
+            }
+            DeliverImage { client_id, path, blob } => {
+                if let Some(client) = self.clients.get(&client_id) {
+                    client.tell(ClientResponse::DeliverImage {
+                        gallery_id: msg.id,
+                        path,
+                        blob,
+                    });
+                }
+            }
+        }
+    }
+}
+
+pub struct SubscribePod {
+    id: PodId,
+    addr: ActorRef<WebClient>,
+    name: String,
+}
+
+pub struct UnsubscribePod(PodId);
+
+pub struct SubscribeClient {
+    id: PodId,
+    addr: ActorRef<WebClient>,
+}
+
+pub struct UnsubscribeClient(PodId);
+
+pub struct IdedPodRequest {
+    id: PodId,
+    message: PodRequest,
+}
