@@ -1,11 +1,12 @@
 use serde_json as json;
 use serde_derive::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use kameo::{Reply};
 
 pub type PodId = u64; // <- danger zone
 
 /// Master -> Browser
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Reply)]
 pub enum ClientResponse {
     Pods(Vec<PodDescription>),
     NewPod { id: PodId, name: String, },
@@ -63,7 +64,7 @@ pub enum PodResponse {
 }
 
 /// Communicate with everything
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Reply)]
 pub enum JsonProtocol {
     ClientRequest(ClientRequest),
     ClientRequestAsync(ClientRequestAsync),
