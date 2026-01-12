@@ -109,9 +109,20 @@ impl Actor for Hub {
     }
 }
 
+impl Message<SubscribeClient> for Hub {
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: SubscribeClient,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.clients.insert(msg.id, msg.addr);
+        ctx.forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods).await;
+    }
+}
+
 impl Message<ClientRequest> for Hub {
     type Reply = ClientResponse;
-    // TODO: add Messageresult<ClientRequest>
     async fn handle(
         &mut self,
         msg: ClientRequest,
