@@ -28,20 +28,43 @@ impl Actor for WebClient {
     }
 }
 impl Message<ClientResponse> for WebClient {
-    type Reply = ();
-    // todo need some kind of ClientResponse
+    type Reply = ClientResponse;
 
     async fn handle(
         &mut self,
         msg: ClientResponse,
         ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let message = JsonProtocol::ClientResponse(msg);
+        //let message = JsonProtocol::ClientResponse(msg);
         // TODO: some wbsocket text stuff here
         // ctx.text(serde_json::to_string(&message).expect("unable to serialize internal state"));
+        msg.clone()
     }
 }
-
+impl Message<ClientRequestAsync> for WebClient{
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        mut msg: ClientRequestAsync,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        if let ClientRequestAsync::RequestImage { client_id, .. } = &mut msg {
+            *client_id = self.id;
+        };
+        self.hub.tell(msg);
+    }
+}
+impl Message<PodResponse> for WebClient{
+    type Reply = ();
+    // Todo implement MessageResult -PodResponse
+    async fn handle(
+        &mut self,
+        msg: PodResponse,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        let msg = JsonProtocol::PodResponse(msg);
+    }
+}
 
 pub struct PodInfo {
     addr: ActorRef<WebClient>,
@@ -83,5 +106,33 @@ impl Actor for Hub {
     async fn on_start(state: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
         println!("HubActor started");
         Ok(Hub::new())
+    }
+}
+impl Message<ClientRequestAsync> for Hub {
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: ClientRequestAsync,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        match msg {
+            ClientRequestAsync::RequestImage { gallery_id, path, client_id } => {
+                match self.pods.get(&gallery_id) {
+                    Some(pod) => {
+                        pod.addr.tell(PodResponse::RequestImage{
+                            path,
+                            client_id
+                        });
+                    }
+                    None => {
+                        if let Some(client) = self.clients.get(&client_id) {
+                            client.tell(
+                                ClientResponse::UnknownPod(gallery_id)
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 }
