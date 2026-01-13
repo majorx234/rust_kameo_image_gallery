@@ -121,6 +121,28 @@ impl Message<SubscribeClient> for Hub {
     }
 }
 
+impl Message<UnsubscribeClient> for Hub {
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: UnsubscribeClient,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.clients.remove(&msg.0);
+
+        // and pod if it was serving data
+        if let Some(lost_pod) = self.pods.remove(&msg.0) {
+            let message = ClientResponse::PodGone(msg.0);
+            self.broadcast_client_response(message);
+            println!("removing pod {}: {:?}", msg.0, lost_pod);
+            println!("  > remaining: {:?}", self.pods);
+        }
+
+        println!("UnsubscribeClient: {:?}", msg.0);
+
+    }
+}
+
 impl Message<SubscribePod> for Hub{
     type Reply = ();
     async fn handle(
@@ -136,6 +158,22 @@ impl Message<SubscribePod> for Hub{
         });
         self.broadcast_client_response(ClientResponse::NewPod { id: msg.id, name: msg.name, });
     }
+}
+
+impl Message<UnsubscribePod> for Hub{
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: UnsubscribePod,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        if let Some(lost_pod) = self.pods.remove(&msg.0) {
+            let message = ClientResponse::PodGone(msg.0);
+            self.broadcast_client_response(message);
+            println!("removing pod {}:{:?}", msg.0, lost_pod.name);
+        }
+    }
+
 }
 
 impl Message<ClientRequest> for Hub {
