@@ -79,10 +79,10 @@ impl Message<PodRequest> for WebClient{
                     self.is_pod = true;
                     let _ = self.hub.tell(SubscribePod { id: self.id, name, addr: ctx.actor_ref().clone(), });
                     //actix::Handler::handle(self, PodResponse::Registered { global_id: self.id }, ctx);
-                    ctx.blocking_forward(&ctx.actor_ref().clone(), PodResponse::Registered { global_id: self.id });
+                    ctx.forward(&ctx.actor_ref().clone(), PodResponse::Registered { global_id: self.id }).await;
                 } else {
                     //actix::Handler::handle(self, PodResponse::AlreadyRegistered { global_id: self.id }, ctx);
-                    ctx.blocking_forward(&ctx.actor_ref().clone(), PodResponse::AlreadyRegistered { global_id: self.id });
+                    ctx.forward(&ctx.actor_ref().clone(), PodResponse::AlreadyRegistered { global_id: self.id }).await.;
                 }
             }
             other_messages => {
@@ -143,7 +143,7 @@ impl Message<SubscribeClient> for Hub {
         ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         self.clients.insert(msg.id, msg.addr);
-        ctx.blocking_forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods);
+        ctx.forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods).await;
         // maybe do self request through ctx.handle(...)
     }
 }
