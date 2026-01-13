@@ -22,7 +22,7 @@ impl WebClient {
 impl Actor for WebClient {
     type Args = Self;
     type Error = Infallible;
-    async fn on_start(state: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
+    async fn on_start(state: Self::Args, _actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
         println!("WebClient Actor started");
         Ok(WebClient::new(state.id, state.hub, state.is_pod))
     }
@@ -33,7 +33,7 @@ impl Message<ClientResponse> for WebClient {
     async fn handle(
         &mut self,
         msg: ClientResponse,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         //let message = JsonProtocol::ClientResponse(msg);
         // TODO: some wbsocket text stuff here
@@ -46,12 +46,11 @@ impl Message<ClientRequestAsync> for WebClient{
     async fn handle(
         &mut self,
         mut msg: ClientRequestAsync,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        if let ClientRequestAsync::RequestImage { client_id, .. } = &mut msg {
-            *client_id = self.id;
-        };
-        self.hub.tell(msg);
+        let ClientRequestAsync::RequestImage { client_id, .. } = &mut msg;
+        *client_id = self.id;
+        let _ = self.hub.tell(msg);
     }
 }
 impl Message<PodResponse> for WebClient{
@@ -60,9 +59,9 @@ impl Message<PodResponse> for WebClient{
     async fn handle(
         &mut self,
         msg: PodResponse,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let msg = JsonProtocol::PodResponse(msg);
+        let _msg = JsonProtocol::PodResponse(msg);
     }
 }
 
@@ -94,7 +93,7 @@ impl Hub{
     }
     fn broadcast_client_response(&self, message: ClientResponse) {
         for addr in self.clients.values() {
-            addr.tell(message.clone());
+            let _ = addr.tell(message.clone());
         }
     }
 
@@ -103,7 +102,7 @@ impl Hub{
 impl Actor for Hub {
     type Args = Self;
     type Error = Infallible;
-    async fn on_start(state: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
+    async fn on_start(_state: Self::Args, _actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
         println!("HubActor started");
         Ok(Hub::new())
     }
@@ -118,6 +117,24 @@ impl Message<SubscribeClient> for Hub {
     ) -> Self::Reply {
         self.clients.insert(msg.id, msg.addr);
         ctx.forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods).await;
+        // maybe do self request through ctx.handle(...)
+    }
+}
+
+impl Message<SubscribePod> for Hub{
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: SubscribePod,
+        _ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        self.pods.insert(msg.id, PodInfo {
+            addr: msg.addr,
+            name: msg.name.clone(),
+            image_paths: vec![],
+            last_modified: Utc::now(),
+        });
+        self.broadcast_client_response(ClientResponse::NewPod { id: msg.id, name: msg.name, });
     }
 }
 
@@ -126,7 +143,7 @@ impl Message<ClientRequest> for Hub {
     async fn handle(
         &mut self,
         msg: ClientRequest,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         use crate::protocols::ClientRequest::*;
         let r = match msg {
@@ -166,7 +183,7 @@ impl Message<ClientRequestAsync> for Hub {
     async fn handle(
         &mut self,
         msg: ClientRequestAsync,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         match msg {
             ClientRequestAsync::RequestImage { gallery_id, path, client_id } => {
@@ -195,7 +212,7 @@ impl Message<IdedPodRequest> for Hub {
     async fn handle(
         &mut self,
         msg: IdedPodRequest,
-        ctx: &mut Context<Self, Self::Reply>,
+        _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         use crate::protocols::PodRequest::*;
         match msg.message {
@@ -220,7 +237,7 @@ impl Message<IdedPodRequest> for Hub {
             }
             DeliverImage { client_id, path, blob } => {
                 if let Some(client) = self.clients.get(&client_id) {
-                    client.tell(ClientResponse::DeliverImage {
+                    let _ = client.tell(ClientResponse::DeliverImage {
                         gallery_id: msg.id,
                         path,
                         blob,
