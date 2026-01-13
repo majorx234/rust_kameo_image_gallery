@@ -82,7 +82,7 @@ impl Message<PodRequest> for WebClient{
                     ctx.forward(&ctx.actor_ref().clone(), PodResponse::Registered { global_id: self.id }).await;
                 } else {
                     //actix::Handler::handle(self, PodResponse::AlreadyRegistered { global_id: self.id }, ctx);
-                    ctx.forward(&ctx.actor_ref().clone(), PodResponse::AlreadyRegistered { global_id: self.id }).await.;
+                    ctx.forward(&ctx.actor_ref().clone(), PodResponse::AlreadyRegistered { global_id: self.id }).await;
                 }
             }
             other_messages => {
@@ -125,7 +125,14 @@ impl Hub{
     }
 
 }
-
+impl Default for Hub{
+    fn default() -> Self {
+        Hub{
+            pods: HashMap::new(),
+            clients: HashMap::new(),
+        }
+    }
+}
 impl Actor for Hub {
     type Args = Self;
     type Error = Infallible;

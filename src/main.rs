@@ -1,8 +1,11 @@
 use kameo::prelude::*;
-use tokio;
+use infra::actors::{self, Hub};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Hello, world!");
+    let actor_ref = Hub::spawn(Hub::default());
+    println!("Hub created!");
+
+    actor_ref.wait_for_shutdown().await;
     Ok(())
 }
