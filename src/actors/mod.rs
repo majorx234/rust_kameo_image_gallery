@@ -65,6 +65,33 @@ impl Message<PodResponse> for WebClient{
     }
 }
 
+impl Message<PodRequest> for WebClient{
+    type Reply = ();
+    async fn handle(
+        &mut self,
+        msg: PodRequest,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+                use PodRequest::*;
+        match msg {
+            RegisterSelf { name, .. } => {
+                if !self.is_pod {
+                    self.is_pod = true;
+                    let _ = self.hub.tell(SubscribePod { id: self.id, name, addr: ctx.actor_ref().clone(), });
+                    //actix::Handler::handle(self, PodResponse::Registered { global_id: self.id }, ctx);
+                    ctx.blocking_forward(&ctx.actor_ref().clone(), PodResponse::Registered { global_id: self.id });
+                } else {
+                    //actix::Handler::handle(self, PodResponse::AlreadyRegistered { global_id: self.id }, ctx);
+                    ctx.blocking_forward(&ctx.actor_ref().clone(), PodResponse::AlreadyRegistered { global_id: self.id });
+                }
+            }
+            other_messages => {
+                let _ = self.hub.tell(IdedPodRequest { id: self.id, message: other_messages });
+            }
+        };
+    }
+}
+
 pub struct PodInfo {
     addr: ActorRef<WebClient>,
     name: String,
@@ -116,7 +143,7 @@ impl Message<SubscribeClient> for Hub {
         ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         self.clients.insert(msg.id, msg.addr);
-        ctx.forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods).await;
+        ctx.blocking_forward(&ctx.actor_ref().clone(), ClientRequest::ListAllPods);
         // maybe do self request through ctx.handle(...)
     }
 }
