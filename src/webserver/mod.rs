@@ -1,16 +1,21 @@
 use std::net::SocketAddr;
 
 use axum::{
-    extract::{ConnectInfo, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}},
-    response::IntoResponse,
+    body::Bytes, extract::{ConnectInfo, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}}, response::IntoResponse
 };
 use axum_extra::{TypedHeader, headers};
 
 pub async fn websocket_handler(ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,) -> impl IntoResponse {
+    let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
+        user_agent.to_string()
+    } else {
+        String::from("Unknown browser")
+    };
+    println!("`{user_agent}` at {addr} connected.");
     ws.on_failed_upgrade(|error| println!("Error upgrading websocket: {}", error))
-        .on_upgrade(handle_web_socket)
+        .on_upgrade(move |socket| handle_web_socket(socket, addr))
 }
 async fn send_close_message(mut socket: WebSocket, code: u16, reason: &str) {
     _ = socket
@@ -20,9 +25,24 @@ async fn send_close_message(mut socket: WebSocket, code: u16, reason: &str) {
         })))
         .await;
 }
-async fn handle_web_socket(mut socket: WebSocket) {
+async fn handle_web_socket(mut socket: WebSocket, who: SocketAddr) {
+    // send a ping (unsupported by some browsers) just to kick things off and get a response
+    if socket
+        .send(Message::Ping(Bytes::from_static(&[1, 2, 3])))
+        .await
+        .is_ok()
+    {
+        println!("Pinged {who}...");
+    } else {
+        println!("Could not send ping {who}!");
+        // no Error here since the only thing we can do is to close the connection.
+        // If we can not send messages, there is no way to salvage the statemachine anyway.
+        return;
+    }
     // Returns `None` if the stream has closed.
+    // debugging websocket connection
     while let Some(msg) = socket.recv().await {
+        // TODO: process messages in extra function
         if let Ok(msg) = msg {
             match msg {
                 Message::Text(utf8_bytes) => {
@@ -52,6 +72,17 @@ async fn handle_web_socket(mut socket: WebSocket) {
                             .await;
                         break;
                     }
+                }
+                Message::Close(c) => {
+                    if let Some(cf) = c {
+                        println!(
+                            ">>> {who} sent close with code {} and reason `{}`",
+                            cf.code, cf.reason
+                        );
+                    } else {
+                        println!(">>> {who} somehow sent close message without CloseFrame");
+                    }
+                    break;
                 }
                 _ => {}
             }
