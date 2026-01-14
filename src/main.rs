@@ -2,10 +2,7 @@ use std::path::PathBuf;
 
 use kameo::prelude::*;
 use infra::{actors::{self, Hub},webserver::websocket_handler};
-use axum::{
-    routing::any,
-    Router,
-};
+use axum::{Router, routing::any};
 use tower_http::services::ServeDir;
 
 

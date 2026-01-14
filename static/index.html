@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.6, maximum-scale=2.0, user-scalable=yes"/>
+        <title>Distributed Gallery</title>
+        <link rel="stylesheet" href="style.css"/>
+        <script src="DebugAll.js"></script>
+        <script src="gallery.js"></script>
+        <script src="self_host.js"></script>
+        <script src="main.js"></script>
+    </head>
+
+    <body>
+        <h1>A Distributed Gallery</h1>
+        <section id="galleries">
+            <ul></ul>
+            <div></div>
+        </section>
+
+        <h1>Share yourself</h1>
+        <form action="#">
+            <label>Name your Gallery: <input id="pod_name" type="text"/></label> <br>
+            <input id="pod_share" type="file" multiple="multiple" accept="image/*" /> <br>
+            <input type="submit" value="Share your Gallery with the World" />
+        </form>
+        <section id="pod_preview">
+            <h1>Your title</h1>
+            <div></div>
+        </section>
+
+        <h2>Development stuff</h2>
+        <div>
+            <button id="ws_echo">Test WebSocket echo</button>
+            <p id="ws_state"></p>
+            <pre id="ws_echo_out"></pre>
+        </div>
+    </body>
+</html>

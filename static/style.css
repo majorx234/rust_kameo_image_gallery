@@ -1,0 +1,37 @@
+
+* {
+    -webkit-transition: 0.3s ease all !important;
+    -moz-transition: 0.3s ease all !important;
+    -ms-transition: 0.3s ease all !important;
+    -o-transition: 0.3s ease all !important;
+    transition: 0.3s ease all !important;
+}
+
+/* Gallery */
+#galleries ul { max-height: 25vh; overflow-y: scroll; background: #81b4ed; }
+
+#galleries ul li { outline-bottom: 1px solid #fff; }
+#galleries ul li:hover { background: rgba(255, 255, 255, 0.3); }
+#galleries ul li:active { background: rgba(255, 128, 128, 0.3); }
+
+#galleries div { display: flex; flex-flow: row wrap; }
+#galleries div div { display: flex; flex-flow: column nowrap; margin: 0.5rem; border-radius: 1rem; padding: 0.5rem; }
+#galleries div div img { max-width: 100%; max-height: 100%; }
+
+.selected { background: yellow; }
+
+/* Pod */
+pre { background: #bbb; }
+
+section { border: 1px solid #999; border-radius: 1rem; padding: 1rem; }
+
+form input { margin: 0.5rem; }
+form input[type=submit] { border: 0px none; padding: 0.7rem 1rem; background: #ea8557; font-size: 18px; cursor: pointer; color: #fff; }
+form input[type=submit]:hover { background-color: #ed956e; }
+
+#pod_preview div { display: flex; flex-flow: row wrap; }
+#pod_preview div div { display: flex; flex-flow: column nowrap; margin: 1rem; max-width: calc(100% - 2rem); }
+#pod_preview div div:hover, #galleries div div:hover  { background: rgba(255, 255, 0, 0.2); }
+#pod_preview div div img { max-width: 245px; max-height: 245px; }
+
+#ws_echo_out { max-height: 50vh; max-width: 100vw; overflow: scroll; }
