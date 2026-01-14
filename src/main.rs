@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
 use kameo::prelude::*;
-use infra::{actors::{self, Hub},webserver::websocket_handler};
+use infra::{actors::{self, Hub},webserver::websocket_handler, config::Config};
 use axum::{Router, routing::any};
-use tower_http::services::ServeDir;
-
+use tower_http::{services::ServeDir,trace::TraceLayer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,6 +11,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hub created!");
 
     let assets_dir = PathBuf::from("./static/");
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(config.get_rust_log()))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     let app = Router::new().fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", any(websocket_handler));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
