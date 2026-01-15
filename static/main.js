@@ -47,7 +47,8 @@ function make_logger(element, state_element) {
 
 function setup_ws() {
     // automatically enable WebSocket over TLS
-    ws = new WebSocket('ws'+(location.protocol.indexOf('https') === 0 ? 's' : '')+'://'+location.host+'/ws/');
+    //ws = new WebSocket('ws'+(location.protocol.indexOf('https') === 0 ? 's' : '')+'://'+location.host+'/ws/');
+    ws = new WebSocket('ws'+'://'+location.host+'/ws');
 
     ws.onclose = _ => {
         html_logger(`-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.- LOST WebSocket Connection -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-`);
