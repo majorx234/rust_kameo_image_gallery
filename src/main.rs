@@ -1,14 +1,24 @@
 use std::{net::SocketAddr, path::PathBuf};
 
 use kameo::prelude::*;
-use infra::{actors::{self, Hub},webserver::websocket_handler, config::Config};
-use axum::{Router, routing::any};
+use infra::{actors::{self, Hub, WebClient}, config::Config, webserver::{AppState, websocket_handler}};
+use axum::{extract::State, Router, routing::any};
 use tower_http::{services::ServeDir,trace::{DefaultMakeSpan, TraceLayer}};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let actor_ref = Hub::spawn(Hub::default());
+
+    let web_actor = WebClient{
+        id: 1,
+        hub: actor_ref.clone(),
+        is_pod: false,
+    };
+   let web_state = AppState{
+       actor_ref: WebClient::spawn(web_actor),
+    };
     println!("Hub created!");
 
     let config = Config::new();
@@ -23,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::default().include_headers(true)),
-        );
+        ).with_state(web_state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     println!("ws-Webserver created!");

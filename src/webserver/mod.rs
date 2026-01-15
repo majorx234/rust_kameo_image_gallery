@@ -1,11 +1,21 @@
 use std::net::SocketAddr;
 
 use axum::{
-    body::Bytes, extract::{ConnectInfo, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}}, response::IntoResponse
+    body::Bytes, extract::{ConnectInfo, State, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}}, response::IntoResponse
 };
 use axum_extra::{TypedHeader, headers};
+use kameo::actor::ActorRef;
 
-pub async fn websocket_handler(ws: WebSocketUpgrade,
+use crate::actors::WebClient;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub actor_ref: ActorRef<WebClient>,
+}
+
+
+pub async fn websocket_handler(State(state): State<AppState>,
+    ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,) -> impl IntoResponse {
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
