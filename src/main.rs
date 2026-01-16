@@ -1,7 +1,7 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::{Arc, Mutex, atomic::AtomicU64}};
 
 use kameo::prelude::*;
-use infra::{actors::{self, Hub, WebClient}, config::Config, webserver::{AppState, websocket_handler}};
+use infra::{actors::{self, Hub, WebClient}, config::Config, webserver::{AppState, Incrementor, websocket_handler}};
 use axum::{extract::State, Router, routing::any};
 use tower_http::{services::ServeDir,trace::{DefaultMakeSpan, TraceLayer}};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -16,8 +16,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         hub: actor_ref.clone(),
         is_pod: false,
     };
-   let web_state = AppState{
-       actor_ref: WebClient::spawn(web_actor),
+
+    let web_state = AppState{
+        // incrementor: std::sync::Arc::new(Incrementor::new()),
+        next_id: std::sync::Arc::new(AtomicU64::new(1)),
+        actor_ref: WebClient::spawn(web_actor),
     };
     println!("Hub created!");
 

@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::atomic::{AtomicU64, AtomicUsize}};
 
 use axum::{
     body::Bytes, extract::{ConnectInfo, State, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}}, response::IntoResponse
@@ -6,18 +6,36 @@ use axum::{
 use axum_extra::{TypedHeader, headers};
 use kameo::actor::ActorRef;
 
-use crate::actors::WebClient;
+use crate::{actors::WebClient, protocols::PodId};
 
 #[derive(Clone)]
 pub struct AppState {
     pub actor_ref: ActorRef<WebClient>,
+    pub next_id: std::sync::Arc<AtomicU64>,
+//    pub incrementor: std::sync::Arc<Incrementor>,
 }
 
+pub struct Incrementor {
+    i: PodId,
+}
+impl Incrementor {
+    pub fn new() -> Self{
+        Incrementor{
+            i:0,
+        }
+    }
+    pub fn increment(&mut self) -> PodId {
+        let id = self.i;
+        self.i = self.i.checked_add(1).expect("we ran out of ids");
+        id
+    }
+}
 
 pub async fn websocket_handler(State(state): State<AppState>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,) -> impl IntoResponse {
+        let id = state.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {
