@@ -6,11 +6,11 @@ use axum::{
 use axum_extra::{TypedHeader, headers};
 use kameo::actor::ActorRef;
 
-use crate::{actors::WebClient, protocols::PodId};
+use crate::{actors::{Hub, WebClient}, protocols::PodId};
 
 #[derive(Clone)]
 pub struct AppState {
-    pub actor_ref: ActorRef<WebClient>,
+    pub actor_ref: ActorRef<Hub>,
     // pub next_id: std::sync::Arc<AtomicU64>,
     pub incrementor: std::sync::Arc<Mutex<Incrementor>>,
 }
@@ -34,9 +34,15 @@ impl Incrementor {
 pub async fn websocket_handler(State(state): State<AppState>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,) -> impl IntoResponse {
-        //let id = state.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let id = state.incrementor.lock().unwrap().increment();
+    ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    //let id = state.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let id = state.incrementor.lock().unwrap().increment();
+    let web_actor = WebClient{
+        id,
+        hub: state.actor_ref.clone(),
+        is_pod: false,
+    };
+
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {
@@ -44,7 +50,7 @@ pub async fn websocket_handler(State(state): State<AppState>,
     };
     println!("`{user_agent}` at {addr} connected.");
     ws.on_failed_upgrade(|error| println!("Error upgrading websocket: {}", error))
-        .on_upgrade(move |socket| handle_web_socket(socket, addr))
+        .on_upgrade(move |socket| handle_web_socket(socket, addr, web_actor))
 }
 async fn send_close_message(mut socket: WebSocket, code: u16, reason: &str) {
     _ = socket
@@ -54,7 +60,7 @@ async fn send_close_message(mut socket: WebSocket, code: u16, reason: &str) {
         })))
         .await;
 }
-async fn handle_web_socket(mut socket: WebSocket, who: SocketAddr) {
+async fn handle_web_socket(mut socket: WebSocket, who: SocketAddr, web_actor: WebClient) {
     // send a ping (unsupported by some browsers) just to kick things off and get a response
     if socket
         .send(Message::Ping(Bytes::from_static(&[1, 2, 3])))

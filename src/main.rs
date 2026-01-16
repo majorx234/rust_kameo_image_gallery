@@ -9,18 +9,13 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let actor_ref = Hub::spawn(Hub::default());
-
-    let web_actor = WebClient{
-        id: 1,
-        hub: actor_ref.clone(),
-        is_pod: false,
-    };
+    // Start only one instance of our central Hub
+    let hub = Hub::spawn(Hub::default());
 
     let web_state = AppState{
         incrementor: std::sync::Arc::new(Mutex::new(Incrementor::new())),
         //next_id: std::sync::Arc::new(AtomicU64::new(1)),
-        actor_ref: WebClient::spawn(web_actor),
+        actor_ref: hub.clone(),
     };
     println!("Hub created!");
 
@@ -42,6 +37,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("ws-Webserver created!");
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
-    actor_ref.wait_for_shutdown().await;
+    hub.wait_for_shutdown().await;
     Ok(())
 }
