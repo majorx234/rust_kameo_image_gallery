@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::atomic::{AtomicU64, AtomicUsize}};
+use std::{net::SocketAddr, sync::{Mutex, atomic::{AtomicU64, AtomicUsize}}};
 
 use axum::{
     body::Bytes, extract::{ConnectInfo, State, ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade}}, response::IntoResponse
@@ -11,8 +11,8 @@ use crate::{actors::WebClient, protocols::PodId};
 #[derive(Clone)]
 pub struct AppState {
     pub actor_ref: ActorRef<WebClient>,
-    pub next_id: std::sync::Arc<AtomicU64>,
-//    pub incrementor: std::sync::Arc<Incrementor>,
+    // pub next_id: std::sync::Arc<AtomicU64>,
+    pub incrementor: std::sync::Arc<Mutex<Incrementor>>,
 }
 
 pub struct Incrementor {
@@ -35,7 +35,8 @@ pub async fn websocket_handler(State(state): State<AppState>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,) -> impl IntoResponse {
-        let id = state.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        //let id = state.next_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let id = state.incrementor.lock().unwrap().increment();
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {

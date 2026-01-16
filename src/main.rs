@@ -18,8 +18,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let web_state = AppState{
-        // incrementor: std::sync::Arc::new(Incrementor::new()),
-        next_id: std::sync::Arc::new(AtomicU64::new(1)),
+        incrementor: std::sync::Arc::new(Mutex::new(Incrementor::new())),
+        //next_id: std::sync::Arc::new(AtomicU64::new(1)),
         actor_ref: WebClient::spawn(web_actor),
     };
     println!("Hub created!");
