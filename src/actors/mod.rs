@@ -5,6 +5,8 @@ use ::chrono::{Utc, DateTime};
 
 use crate::protocols::{ClientRequest, ClientRequestAsync, ClientResponse, JsonProtocol, PodId, PodRequest, PodResponse};
 
+pub mod websocket;
+
 pub struct WebClient {
     pub id: PodId,
     pub hub: ActorRef<Hub>,
@@ -27,6 +29,8 @@ impl Actor for WebClient {
         Ok(WebClient::new(state.id, state.hub, state.is_pod))
     }
 }
+
+//impl Message<>
 impl Message<ClientResponse> for WebClient {
     type Reply = ClientResponse;
 
