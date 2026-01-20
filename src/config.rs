@@ -55,3 +55,9 @@ impl Config {
         &self.rust_log
     }
 }
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
