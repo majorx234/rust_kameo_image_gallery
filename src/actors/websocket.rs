@@ -1,6 +1,5 @@
 use std::convert::{From, Into};
-use std::fmt;
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use self::CloseCode::*;
 
 

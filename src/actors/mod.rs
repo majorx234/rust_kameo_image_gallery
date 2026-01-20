@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kameo::{error::Infallible, prelude::*};
+use kameo::{error::Infallible, message::StreamMessage, prelude::*};
 use ::chrono::{Utc, DateTime};
 
 use crate::protocols::{ClientRequest, ClientRequestAsync, ClientResponse, JsonProtocol, PodId, PodRequest, PodResponse};
@@ -27,6 +27,43 @@ impl Actor for WebClient {
     async fn on_start(state: Self::Args, _actor_ref: ActorRef<Self>) -> Result<Self, Self::Error> {
         println!("WebClient Actor started");
         Ok(WebClient::new(state.id, state.hub, state.is_pod))
+    }
+}
+impl Message<StreamMessage<String, &'static str, &'static str>> for WebClient {
+    type Reply = ();
+
+    async fn handle(
+        &mut self,
+        msg: StreamMessage<String, &'static str, &'static str>,
+        ctx: &mut Context<Self, Self::Reply>,
+    ) -> Self::Reply {
+        match msg {
+            StreamMessage::Next(json_raw) => {
+                let json_command:Result<JsonProtocol, _> = serde_json::from_str(json_raw.as_str());
+                                match json_command {
+                    Ok(JsonProtocol::ClientRequest(message)) => {
+                        let response = self.hub.ask(message).await.expect("error processing ClientRequest");
+                        _ = ctx.forward(&ctx.actor_ref().clone(), response);
+                    }
+                    Ok(JsonProtocol::ClientRequestAsync(message)) => {
+                        _ = ctx.forward(&ctx.actor_ref().clone(), message);
+                    }
+                    Ok(JsonProtocol::PodRequest(message)) => {
+                        _ = ctx.forward(&ctx.actor_ref().clone(), message);
+                    }
+                    _invalid => {
+                        print!("{{\"invalid request\":{:?}}}", _invalid);
+                    }
+                }
+            }
+            StreamMessage::Started(s) => {
+                println!("Started {s}");
+            }
+            StreamMessage::Finished(s) => {
+                println!("Finished {s}");
+                    ctx.actor_ref().stop_gracefully().await.unwrap();
+            }
+        }
     }
 }
 

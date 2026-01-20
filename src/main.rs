@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf, sync::{Arc, Mutex, atomic::AtomicU64}};
+use std::{net::SocketAddr, path::PathBuf, sync::Mutex};
 
 use kameo::prelude::*;
 use infra::{actors::{self, Hub, WebClient}, config::Config, webserver::{AppState, Incrementor, websocket_handler}};
